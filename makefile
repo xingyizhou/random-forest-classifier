@@ -6,11 +6,11 @@ OS = $(shell uname)
 
 all: train predict
 
-train: common.o classificationforest.o train.cpp 
-	$(CXX) $(CFLAGS) -o train train.cpp common.o classificationforest.o
+train: classificationforest.o train.cpp 
+	$(CXX) $(CFLAGS) -o train train.cpp classificationforest.o
 
-predict: common.o classificationforest.o predict.cpp 
-	$(CXX) $(CFLAGS) -o predict predict.cpp common.o classificationforest.o
+predict: classificationforest.o predict.cpp 
+	$(CXX) $(CFLAGS) -o predict predict.cpp classificationforest.o
 
 common.o: common.h
 	$(CXX) $(CFLAGS) -c -o common.o common.h
