@@ -19,17 +19,17 @@ private:
     int getRangeLabel(Range range);
     double calculateFeature(Data *data,splitCandidate *phi);
 
-    void writeTree(int treeId,std::string fileName);
+    void writeTree(FILE *fp, int treeId);
     void writeNode(Node *cur,FILE *fp);
-    void writeForest(std::string fileName="forest");
-    void loadTree(std::string fileName, int demensionNum);
+    void loadTree(FILE *fp, int weakLearnerType);
     void loadNode(Node **cur,char nodeType,FILE *fp,int demensionNum);
-	  void deleteTree(Node *root);
+	void deleteTree(Node *root);
 public:
     ClassificationForest(){}
     ~ClassificationForest();
     void trainForest(TrainParameter *trainParameter,TrainData *trainData);
-    void loadForest(std::string fileName="forest");
+    void writeForest(std::string fileName);
+    void loadForest(std::string fileName);
     int classification(Data &data,std::vector<int> &votes);
 
 };

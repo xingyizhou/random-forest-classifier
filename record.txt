@@ -1,2 +1,0 @@
-DATADIMENTION	trainDataNum	weakLearnerType	treeNum	splitFunctionNum	thresholdNum	baggingRate	Accuracy	trainTime    
-

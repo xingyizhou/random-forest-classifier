@@ -1,6 +1,8 @@
 #include "classificationforest.h"
 using namespace std;
 
+extern int LABELNUM;
+extern int DATADIMENTION;
 
 double ClassificationForest::calculateFeature(Data *data, splitCandidate *phi)
 {
@@ -166,7 +168,7 @@ void ClassificationForest::trainTree(int treeId)
     stack<StackElement> stk;
     int dep,mid;
 
-    cout<<"Training tree "<<treeId<<"."<<endl;
+    //cout<<"Training tree "<<treeId<<"."<<endl;
     TrainData *td=new TrainData(trainDataPtr->data,trainDataPtr->labels);
     td->reOrder();
     range.td = td;
@@ -221,11 +223,17 @@ void ClassificationForest::trainForest(TrainParameter *trainParameter,TrainData 
     weakLearnerType=tp->weakLearnerType;
     trees.resize(tp->treeNum,NULL);
 
-#pragma omp parallel for
-    for(int i=0;i<tp->treeNum;i++)
-        trainTree(i);
+//#pragma omp parallel for
+    for(int i=0;i<tp->treeNum;i++) {
+      printf("[");
+      for (int j = 0; j < 50; j++) 
+        printf("%c",i * 50 < j * tp->treeNum ? ' ': (i * 50 < (j + 1) * tp->treeNum ? '>' : '='));
+      fflush(stdout);
+      printf("] %d%%", (i + 1) * 100 / (tp->treeNum));
+      printf(i < tp->treeNum -1 ? "\r" : "\n");
+      trainTree(i);
+    }
 
-    writeForest();
     cout<<"Train forest ok."<<endl;
 }
 
@@ -273,14 +281,10 @@ void ClassificationForest::writeNode(Node *cur,FILE *fp)
     }
 }
 
-void ClassificationForest::writeTree(int treeId,std::string fileName)
+void ClassificationForest::writeTree(FILE * fp, int treeId)
 {
-    FILE *fp;
     splitNode *cur;
     stack<splitNode *>stk;
-
-    fp=fopen(fileName.c_str(),"w");
-    //cout<<"Writing tree to file "<<fileName<<"."<<endl;
 
     writeNode((Node *)trees[treeId],fp);
 
@@ -296,21 +300,17 @@ void ClassificationForest::writeTree(int treeId,std::string fileName)
         writeNode(cur->right,fp);
         if (!(cur->right->isLeaf())) stk.push((splitNode *)cur->right);
     }
-    fclose(fp);
 }
 
 void ClassificationForest::writeForest(string fileName)
 {
     cout<<"Writing forest."<<endl;
-    FILE *fp=fopen((fileName+string("/forestConfigure.txt")).c_str(),"w");
+    FILE *fp=fopen(fileName.c_str(),"wb");
     fprintf(fp,"%d %d\n",tp->treeNum,tp->weakLearnerType);
-    fclose(fp);
+
     for (int i=0;i<trees.size();i++)
-    {
-        stringstream fileNameSS;
-        fileNameSS<<fileName<<"/"<<i<<".tree";
-        writeTree(i,fileNameSS.str());
-    }
+      writeTree(fp, i);
+    fclose(fp);
 }
 
 
@@ -358,20 +358,12 @@ void ClassificationForest::loadNode(Node **cur, char nodeType, FILE *fp, int wea
     fscanf(fp,"\n");
 }
 
-void ClassificationForest::loadTree(string fileName, int weakLeanerType)
+void ClassificationForest::loadTree(FILE *fp, int weakLeanerType)
 {
-    FILE *fp;
     stack<splitNode *> stk;
     splitNode *cur;
     Node *left,*right;
     char nodeType;
-
-    if ((fp=fopen(fileName.c_str(),"r"))==NULL)
-    {
-        printf("Cannot open file %s.\n",fileName.c_str());
-        exit(0);
-    } else
-    //cout<<"Loading tree from"<<fileName<<"."<<endl;
 
     fscanf(fp,"%c ",&nodeType);
     loadNode((Node **)&cur, nodeType, fp, weakLeanerType);
@@ -395,23 +387,18 @@ void ClassificationForest::loadTree(string fileName, int weakLeanerType)
         if (nodeType=='S')
             stk.push((splitNode *)right);
     }
-    fclose(fp);
 }
 
 void ClassificationForest::loadForest(string fileName)
 {
     int treeNum;
     cout<<"Loading forest."<<endl;
-    FILE *fp=fopen((fileName+string("/forestConfigure.txt")).c_str(),"r");
-    fscanf(fp, "%d %d", &treeNum, &weakLearnerType);
-    fclose(fp);
+    FILE *fp=fopen(fileName.c_str(),"rb");
+    fscanf(fp, "%d %d\n", &treeNum, &weakLearnerType);
 
     for (int i=0;i<treeNum;i++)
-    {
-        stringstream fileNameSS;
-        fileNameSS<<fileName<<"/"<<i<<".tree";
-        loadTree(fileNameSS.str(), weakLearnerType);
-    }
+      loadTree(fp, weakLearnerType);
+    fclose(fp);
 }
 
 void ClassificationForest::deleteTree(Node *root)

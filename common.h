@@ -12,15 +12,11 @@
 #include<stack>
 #include<ctime>
 #include<cassert>
-#include<omp.h>
+//#include<omp.h>
 
-#define MAX_DOUBLE 1e300
-#define INF 0x7fffffff
-#define EPS 1e-6
-
-#define LABELNUM 200
-#define DATADIMENTION (4096 * 3 * 3)
-
+#define MAX_DOUBLE (1e300)
+#define INF (0x7fffffff)
+#define EPS (1e-6)
 
 class TrainParameter
 {
@@ -28,7 +24,6 @@ public:
     std::string trainDataPath;
 
     int treeNum;
-    int trainDataNum;
     int splitFunctionNum;
 
     int thresholdNum;
@@ -40,7 +35,6 @@ public:
     int minSample;
     void print()
     {
-        std::cout<<"trainDataNum = "<<trainDataNum<<std::endl;
         std::cout <<"weakLearnerType = "<<weakLearnerType<<std::endl;
         std::cout<<"treeNum = "<<treeNum<<std::endl;
         std::cout<<"splitFunctionNum = "<<splitFunctionNum<<std::endl;
@@ -145,8 +139,10 @@ public:
         bool getValue=false;
         bool decimalPoint=false;
         double rate=0.1;
-
-        s=s+' ';
+        int sig = 1;
+        
+        if (s[s.size() - 1] != ' ')
+          s=s+' ';
         item.value.clear();
         item.index.clear();
         label=0;
@@ -171,7 +167,8 @@ public:
                 if (getLabel) getLabel=false;
                 else
                 {
-                    item.value.push_back(value);
+                    item.value.push_back(value * sig);
+                    sig = 1;
                     value=0;
                 }
                 getIdx=true;
@@ -188,6 +185,9 @@ public:
             } else
             if (s[i]=='.')
                 decimalPoint=true;
+            else 
+            if (getValue && s[i] == '-')
+                sig = -1;
         }
 
     }
@@ -202,7 +202,6 @@ public:
         while (getline(fin,s))
         {
             getData(s,item,label);
-            label--;
             data.push_back(item);
             labels.push_back(label);
             if (data.size()>=maxNum) break;
@@ -240,140 +239,6 @@ public:
     StackElement(splitNode *cur, Range range, int dep) :cur(cur), range(range), dep(dep){}
 };
 
-
-class Point
-{
-public:
-    std::vector<double> p;
-
-    Point(){}
-    ~Point(){}
-    Point(std::vector<int> *index,Data *data)
-    {
-        for (int i=0;i<index->size();i++)
-            p.push_back((*data)[(*index)[i]]);
-    }
-
-    Point(int u)
-    {
-        p.resize(u,0);
-    }
-
-    double dis(Point u)
-    {
-        double res=0;
-        for(int i=0;i<p.size();i++)
-            res+=(p[i]-u[i])*(p[i]-u[i]);
-        return res;
-    }
-
-    Point operator +(Point &u)
-    {
-        Point res;
-        for (int i=0;i<p.size();i++)
-            res.p.push_back(p[i]+u[i]);
-        return res;
-    }
-
-    Point operator /(double u)
-    {
-        Point res;
-        for (int i=0;i<p.size();i++)
-            res.p.push_back(p[i]/u);
-        return res;
-    }
-
-    double operator[](int u)
-    {
-        return p[u];
-    }
-
-    void print()
-    {
-        std::cerr<<"Point : ";
-        for (int i=0;i<p.size();i++)
-            std::cerr<<p[i]<<" ";
-        std::cerr<<std::endl;
-    }
-
-    bool zero()
-    {
-        for (int i=0;i<p.size();i++)
-            if (fabs(p[i])>EPS) return false;
-        return true;
-    }
-
-    bool equal(Point &u)
-    {
-        for (int i=0;i<p.size();i++)
-            if (fabs(p[i]-u[i])>EPS) return false;
-        return true;
-    }
-
-};
-
-class Kmeans
-{
-public:
-    Point p[2];
-    std::vector<Point> data;
-
-    Kmeans(){}
-    ~Kmeans(){}
-
-    Kmeans(Range &range,std::vector<int> index)
-    {
-        for (int i=range.l;i<=range.r;i++)
-            data.push_back(Point(&index,&(range.td->data[i])));
-
-        p[0]=Point(&index,&(range.td->data[range.l]));
-        for (int i=range.l+1;i<=range.r;i++)
-            if (range.td->labels[i]!=range.td->labels[range.l])
-            {
-                p[1]=Point(&index,&(range.td->data[i]));
-                break;
-            }
-    }
-
-    void solve(Range &range,int iterations)
-    {
-        for (int itr=0;itr<iterations;itr++)
-        {
-            Point m[2];
-            for (int i=0;i<2;i++)
-                m[i].p.resize(p[0].p.size(),0);
-            int card[2]={0,0};
-
-            for (int i=0;i<data.size();i++)
-            {
-                if (p[0].dis(data[i])<p[1].dis(data[i]))
-                {
-                    m[0]=m[0]+data[i];
-                    card[0]++;
-                } else
-                {
-                    m[1]=m[1]+data[i];
-                    card[1]++;
-                }
-            }
-
-            if (card[0]==0||card[1]==0)
-            {
-                std::cerr<<"dataSize = "<<data.size()<<std::endl;
-                p[0].print();
-                p[1].print();
-
-            }
-
-            assert(card[0]>0&&card[1]>0);
-            p[0]=m[0]/card[0];
-            p[1]=m[1]/card[1];
-        }
-    }
-
-
-
-};
 
 
 inline double randDouble()
